@@ -1,0 +1,105 @@
+buildscript {
+    ext.kotlin_version = '2.1.0'
+
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "com.android.tools.build:gradle:8.1.1"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
+subprojects { project ->
+    def safeProjectName = project.name.replaceAll('[^A-Za-z0-9_]', '_')
+    def fallbackNamespace = "com.bharatmandiram.pocketfm.${safeProjectName}"
+
+    project.pluginManager.withPlugin('com.android.library') {
+        def androidExt = project.extensions.findByName('android')
+        if (androidExt != null && androidExt.hasProperty('namespace')) {
+            def currentNamespace = androidExt.namespace
+            if (currentNamespace == null || currentNamespace.toString().trim().isEmpty()) {
+                androidExt.namespace = fallbackNamespace
+            }
+        }
+        
+        android {
+            compileSdkVersion 34
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+        }
+    }
+    
+    project.pluginManager.withPlugin('com.android.application') {
+        project.extensions.findByName('android')?.compileOptions {
+            sourceCompatibility JavaVersion.VERSION_17
+            targetCompatibility JavaVersion.VERSION_17
+        }
+    }
+    
+    project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = "17"
+        }
+    }
+}
+
+subprojects {
+    def fixAndroidConfig = {
+        if (project.plugins.hasPlugin("com.android.library")) {
+            project.android.compileSdkVersion = 34
+            project.android.compileOptions.sourceCompatibility = JavaVersion.VERSION_17
+            project.android.compileOptions.targetCompatibility = JavaVersion.VERSION_17
+        }
+        project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions {
+                jvmTarget = "17"
+            }
+        }
+    }
+
+    if (project.state.executed) {
+        fixAndroidConfig()
+    } else {
+        project.afterEvaluate {
+            fixAndroidConfig()
+        }
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+
+subprojects {
+    configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'org.jetbrains.kotlin') {
+                details.useVersion '2.1.0'
+                details.because 'Use Kotlin 2.1.0 to match Flutter compatibility'
+            }
+        }
+    }
+}

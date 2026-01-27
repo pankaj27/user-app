@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "730491295964",
+    "project_id": "bharatmandiram-pocketfm-2956e",
+    "storage_bucket": "bharatmandiram-pocketfm-2956e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:730491295964:android:464ea3a6c186c1d91efc19",
+        "android_client_info": {
+          "package_name": "com.bharatmandiram.pocketfm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAEBJ1mKIu-bcGtaDta2WZ-ERu9yP-0jK8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
