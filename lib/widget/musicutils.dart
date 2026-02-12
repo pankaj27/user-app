@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 class SeekBar extends StatefulWidget {
   final Duration duration;
@@ -32,9 +33,7 @@ class SeekBarState extends State<SeekBar> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    _sliderThemeData = SliderTheme.of(context).copyWith(
-      trackHeight: 2.0,
-    );
+    _sliderThemeData = SliderTheme.of(context).copyWith(trackHeight: 2.0);
   }
 
   @override
@@ -51,8 +50,10 @@ class SeekBarState extends State<SeekBar> {
             child: Slider(
               min: 0.0,
               max: widget.duration.inMilliseconds.toDouble(),
-              value: min(widget.bufferedPosition.inMilliseconds.toDouble(),
-                  widget.duration.inMilliseconds.toDouble()),
+              value: min(
+                widget.bufferedPosition.inMilliseconds.toDouble(),
+                widget.duration.inMilliseconds.toDouble(),
+              ),
               onChanged: (value) {
                 setState(() {
                   _dragValue = value;
@@ -77,8 +78,10 @@ class SeekBarState extends State<SeekBar> {
           child: Slider(
             min: 0.0,
             max: widget.duration.inMilliseconds.toDouble(),
-            value: min(_dragValue ?? widget.position.inMilliseconds.toDouble(),
-                widget.duration.inMilliseconds.toDouble()),
+            value: min(
+              _dragValue ?? widget.position.inMilliseconds.toDouble(),
+              widget.duration.inMilliseconds.toDouble(),
+            ),
             onChanged: (value) {
               setState(() {
                 _dragValue = value;
@@ -99,11 +102,12 @@ class SeekBarState extends State<SeekBar> {
           right: 16.0,
           bottom: 0.0,
           child: Text(
-              RegExp(r'((^0*[1-9]\d*:)?\d{2}:\d{2})\.\d+$')
-                      .firstMatch("$_remaining")
-                      ?.group(1) ??
-                  '$_remaining',
-              style: Theme.of(context).textTheme.bodySmall),
+            RegExp(
+                  r'((^0*[1-9]\d*:)?\d{2}:\d{2})\.\d+$',
+                ).firstMatch("$_remaining")?.group(1) ??
+                '$_remaining',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ),
       ],
     );
@@ -163,11 +167,14 @@ void showSliderDialog({
           height: 100.0,
           child: Column(
             children: [
-              Text('${snapshot.data?.toStringAsFixed(1)}$valueSuffix',
-                  style: const TextStyle(
-                      fontFamily: 'Fixed',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24.0)),
+              Text(
+                '${snapshot.data?.toStringAsFixed(1)}$valueSuffix',
+                style: const TextStyle(
+                  fontFamily: 'Fixed',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24.0,
+                ),
+              ),
               Slider(
                 divisions: divisions,
                 min: min,
@@ -191,8 +198,11 @@ class AudioObject {
   const AudioObject(this.title, this.subtitle, this.img);
 }
 
-double valueFromPercentageInRange(
-    {required final double min, max, percentage}) {
+double valueFromPercentageInRange({
+  required final double min,
+  max,
+  percentage,
+}) {
   return percentage * (max - min) + min;
 }
 
@@ -200,7 +210,7 @@ double percentageFromValueInRange({required final double min, max, value}) {
   return (value - min) / (max - min);
 }
 
-AudioSource buildAudioSource({
+Future<AudioSource> buildAudioSource({
   required String audioUrl,
   required String contentType,
   required String episodeId,
@@ -212,19 +222,37 @@ AudioSource buildAudioSource({
   required String artistID,
   bool? isContinueWatching,
   required Map<String, dynamic>? extraDetails,
-}) {
+}) async {
+  Uri audioUri;
+  if (audioUrl.contains("youtube.com") || audioUrl.contains("youtu.be")) {
+    try {
+      var yt = YoutubeExplode();
+      var video = await yt.videos.get(audioUrl);
+      var manifest = await yt.videos.streamsClient.getManifest(video.id);
+      var audioStreamInfo = manifest.audioOnly.withHighestBitrate();
+      audioUri = audioStreamInfo.url;
+      yt.close();
+    } catch (e) {
+      debugPrint("Error extracting YouTube audio: $e");
+      audioUri = Uri.parse(audioUrl);
+    }
+  } else {
+    audioUri = Uri.parse(audioUrl);
+  }
+
   return AudioSource.uri(
-    Uri.parse(audioUrl),
+    audioUri,
     tag: MediaItem(
-        id: episodeId,
-        album: contentId,
-        displaySubtitle: displaydiscription,
-        artUri: Uri.parse(image),
-        title: title,
-        extras: extraDetails,
-        genre: contentType,
-        playable: isContinueWatching,
-        displayDescription: musicType,
-        artist: artistID),
+      id: episodeId,
+      album: contentId,
+      displaySubtitle: displaydiscription,
+      artUri: Uri.parse(image),
+      title: title,
+      extras: extraDetails,
+      genre: contentType,
+      playable: isContinueWatching,
+      displayDescription: musicType,
+      artist: artistID,
+    ),
   );
 }

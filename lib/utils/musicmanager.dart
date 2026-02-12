@@ -60,7 +60,7 @@ class MusicManager {
         );
       }
       await playlist.add(
-        buildAudioSource(
+        await buildAudioSource(
           // image: episodeDataList?[i].portraitImg.toString() ?? "",
           image: imageUrl,
           // audioUrl: episodeDataList?[i].music.toString() ?? "",
